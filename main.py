@@ -53,6 +53,13 @@ class RuntimeState:
     personality_prompt: str = dataclasses.field(default="")
 
 
+def sinput(prompt):
+    try:
+        return input(prompt)
+    except EOFError:
+        return graceful_exit()
+
+
 con = SimpleSQLite("database.db", "a")
 
 
@@ -64,8 +71,8 @@ def create_tables():
 
 
 def execute_login() -> bool:
-    username_input = input(Fore.CYAN + "Enter your username: ")
-    password_input = input(Fore.CYAN + "Enter your password: ")
+    username_input = sinput(Fore.CYAN + "Enter your username: ")
+    password_input = sinput(Fore.CYAN + "Enter your password: ")
 
     try:
         user = User.select(where=f"username='{username_input}'")
@@ -87,8 +94,8 @@ def execute_login() -> bool:
 
 
 def execute_registration() -> bool:
-    username_input = input(Fore.CYAN + "choose a username: ")
-    password_input = input(Fore.CYAN + "choose a password: ")
+    username_input = sinput(Fore.CYAN + "choose a username: ")
+    password_input = sinput(Fore.CYAN + "choose a password: ")
 
     new_user = User(username=username_input, password=password_input)
 
@@ -108,7 +115,8 @@ def execute_registration() -> bool:
 def ask_question():
     system_prompt = f"""
         {RuntimeState.system_prompt}
-        {RuntimeState.personality_prompt}
+        
+        Your personality is: {RuntimeState.personality_prompt}
     """
 
     agent = Agent(
@@ -119,7 +127,7 @@ def ask_question():
     result = None
 
     while True:
-        user_input = input(Fore.CYAN + "ask a question: ")
+        user_input = sinput(Fore.CYAN + "ask a question: ")
         message_history = result.all_messages() if result else []
         result = agent.run_sync(user_input, message_history=message_history)
         print(Fore.YELLOW + f"assistant: {result.output}\n")
@@ -139,13 +147,15 @@ def welcome_user():
     }
 
     while True:
-        intent = input(
+        intent = sinput(
             Fore.LIGHTMAGENTA_EX + "What do you wish to do?\n" +
             Fore.GREEN + "1. Register\n" +
             Fore.YELLOW + "2. Login\n" +
             Fore.CYAN + "3. Simply ask a question\n" +
             Fore.WHITE + "Choose: "
-        ).lower()
+        )
+        
+        intent = intent.lower()
 
         if intent not in intent_to_action_map:
             print(Fore.RED + "Unknown intent, please try again.")
@@ -156,7 +166,7 @@ def welcome_user():
 
 def create_prompt(ptype: Literal["system", "personality"]) -> str:
     while True:
-        text = input(Fore.CYAN + f"Enter your {ptype} prompt: ").strip()
+        text = sinput(Fore.CYAN + f"Enter your {ptype} prompt: ").strip()
         if not text:
             print(Fore.RED + "Prompt cannot be empty.")
             continue
@@ -192,7 +202,7 @@ def choose_prompt(ptype: Literal["system", "personality"]) -> str:
         print(Fore.CYAN + f"{p.id}. {p.prompt_text}")
 
     while True:
-        choice = input(
+        choice = sinput(
             Fore.CYAN + f"Choose a {ptype} prompt ID, 0 to create a new one, or -1 to exit this input: "
         ).strip()
 
@@ -233,7 +243,7 @@ def create_prompt_flow():
         "person": lambda: create_prompt("personality"),
     }
     while True:
-        choice = input(
+        choice = sinput(
             Fore.MAGENTA + "Create:\n" +
             Fore.GREEN + "1. System prompt\n" +
             Fore.YELLOW + "2. Personality prompt\n" +
@@ -252,7 +262,7 @@ def create_prompt_flow():
         if choice in {"1", "sys", "system"}:
             RuntimeState.system_prompt = result
 
-            follow_up = input(
+            follow_up = sinput(
                 Fore.CYAN + "Would you like to create a personality prompt as well? (Y/n): "
             ).strip().lower()
 
@@ -263,9 +273,6 @@ def create_prompt_flow():
         elif choice in {"person", "personality", "2"}:
             RuntimeState.personality_prompt = result
 
-        print(RuntimeState.system_prompt)
-        print(RuntimeState.personality_prompt)
-        print(RuntimeState.login_user)
         break
 
 
@@ -286,7 +293,7 @@ def decide_on_prompts():
     }
 
     while True:
-        intent = input(
+        intent = sinput(
             Fore.MAGENTA + "Would you like to:\n" +
             Fore.GREEN + "1. Create a new prompt\n" +
             Fore.YELLOW + "2. Start a conversation with an existing prompt\n" + 
