@@ -40,6 +40,10 @@ def execute_registration() -> bool:
     try:
         User.insert(new_user)
         con.commit()
+
+        created_user = next(User.select(where=f"username='{username_input}'"))
+
+        RuntimeState.login_user = created_user
         print(Fore.GREEN + "You registered successfully!")
         return True
     except OperationalError as e:
