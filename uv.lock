@@ -20,6 +20,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "colorama" },
+    { name = "prompt-toolkit" },
     { name = "pydantic" },
     { name = "pydantic-ai" },
     { name = "pydantic-settings" },
@@ -31,6 +32,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "colorama", specifier = ">=0.4.6" },
+    { name = "prompt-toolkit", specifier = ">=3.0.51" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-ai", specifier = ">=0.4.2" },
     { name = "pydantic-settings", specifier = ">=2.10.1" },

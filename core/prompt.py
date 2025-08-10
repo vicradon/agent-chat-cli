@@ -4,9 +4,10 @@ from pydantic_ai import Agent
 
 from core.ai_models import general_model
 from core.models import Prompts
-from core.input import sinput
+from core.input import prompt_inputs_to_input, sinput
 from core.state import RuntimeState
 from core.database import con
+from core.interfaces import PromptInput
 
 
 def ask_question():
@@ -148,6 +149,7 @@ def existing_prompt_flow():
     ask_question()
 
 
+
 def decide_on_prompts():
     intent_map = {
         "1": create_prompt_flow,
@@ -157,14 +159,14 @@ def decide_on_prompts():
         "3": ask_question,
     }
 
+    prompt_inputs = [
+        PromptInput(color=Fore.GREEN, text="Create a new prompt"),
+        PromptInput(color=Fore.YELLOW, text="Start a conversation with an existing prompt"),
+        PromptInput(color=Fore.MAGENTA, text="Simply start a conversation"),
+    ]
+
     while True:
-        intent = sinput(
-            Fore.MAGENTA + "Would you like to:\n" +
-            Fore.GREEN + "1. Create a new prompt\n" +
-            Fore.YELLOW + "2. Start a conversation with an existing prompt\n" + 
-            Fore.MAGENTA + "3. Simply start a conversation\n" + 
-            Fore.WHITE + "Choice: "
-        ).strip()
+        intent = prompt_inputs_to_input(prompt_inputs)
 
         if intent in intent_map:
             intent_map[intent]()

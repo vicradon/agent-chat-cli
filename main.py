@@ -1,5 +1,4 @@
 import signal
-
 from colorama import init
 
 from core.welcome import welcome_user
