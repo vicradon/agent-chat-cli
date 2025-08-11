@@ -17,3 +17,12 @@ class Prompts(Model):
         "CHECK(prompt_type IN ('system', 'personality'))",
     ]
 
+class Conversation(Model):
+    id = Integer(primary_key=True)
+    user_id = Integer(not_null=True)
+    title = Text(default="")
+    content = Text(default="")
+
+    __constraints__ = [
+        "FOREIGN KEY(user_id) REFERENCES User(id)"
+    ]

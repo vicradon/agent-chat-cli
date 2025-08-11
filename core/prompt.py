@@ -2,33 +2,39 @@ from typing import Literal
 from colorama import Fore
 from pydantic_ai import Agent
 
+
 from core.ai_models import general_model
 from core.models import Prompts
 from core.input import prompt_inputs_to_input, sinput
 from core.state import RuntimeState
 from core.database import con
 from core.interfaces import PromptInput
+from helpers.ai import ai_helper
 
 
 def ask_question():
-    system_prompt = f"""
-        {RuntimeState.system_prompt}
-        
-        Your personality is: {RuntimeState.personality_prompt}
-    """
+    system_prompt = f"{RuntimeState.system_prompt}"
+
+    if RuntimeState.personality_prompt:
+        system_prompt += f"Your personality is: {RuntimeState.personality_prompt}"
 
     agent = Agent(
         general_model,
         system_prompt=system_prompt,
     )
 
-    result = None
+    result = ai_helper.load_conversation(1)
 
     while True:
         user_input = sinput(Fore.CYAN + "ask a question: ")
         message_history = result.all_messages() if result else []
+
         result = agent.run_sync(user_input, message_history=message_history)
+        
+        ai_helper.save_conversation(result)
+
         print(Fore.YELLOW + f"assistant: {result.output}\n")
+
 
 def create_prompt(ptype: Literal["system", "personality"]) -> str:
     while True:
@@ -69,7 +75,8 @@ def choose_prompt(ptype: Literal["system", "personality"]) -> str:
 
     while True:
         choice = sinput(
-            Fore.CYAN + f"Choose a {ptype} prompt ID, 0 to create a new one, or -1 to exit this input: "
+            Fore.CYAN
+            + f"Choose a {ptype} prompt ID, 0 to create a new one, or -1 to exit this input: "
         ).strip()
 
         if choice == "0":
@@ -78,7 +85,7 @@ def choose_prompt(ptype: Literal["system", "personality"]) -> str:
             return RuntimeState.system_prompt
         elif choice == "-1" and ptype == "personality":
             return RuntimeState.personality_prompt
-        
+
         try:
             choice_id = int(choice)
             selected = next((p for p in prompts if p.id == choice_id), None)
@@ -110,10 +117,14 @@ def create_prompt_flow():
     }
     while True:
         choice = sinput(
-            Fore.MAGENTA + "Create:\n" +
-            Fore.GREEN + "1. System prompt\n" +
-            Fore.YELLOW + "2. Personality prompt\n" +
-            Fore.WHITE + "Choice: "
+            Fore.MAGENTA
+            + "Create:\n"
+            + Fore.GREEN
+            + "1. System prompt\n"
+            + Fore.YELLOW
+            + "2. Personality prompt\n"
+            + Fore.WHITE
+            + "Choice: "
         ).strip()
 
         if choice not in type_map:
@@ -128,9 +139,14 @@ def create_prompt_flow():
         if choice in {"1", "sys", "system"}:
             RuntimeState.system_prompt = result
 
-            follow_up = sinput(
-                Fore.CYAN + "Would you like to create a personality prompt as well? (Y/n): "
-            ).strip().lower()
+            follow_up = (
+                sinput(
+                    Fore.CYAN
+                    + "Would you like to create a personality prompt as well? (Y/n): "
+                )
+                .strip()
+                .lower()
+            )
 
             if follow_up != "n":
                 result = create_prompt("personality")
@@ -149,7 +165,6 @@ def existing_prompt_flow():
     ask_question()
 
 
-
 def decide_on_prompts():
     intent_map = {
         "1": create_prompt_flow,
@@ -161,7 +176,9 @@ def decide_on_prompts():
 
     prompt_inputs = [
         PromptInput(color=Fore.GREEN, text="Create a new prompt"),
-        PromptInput(color=Fore.YELLOW, text="Start a conversation with an existing prompt"),
+        PromptInput(
+            color=Fore.YELLOW, text="Start a conversation with an existing prompt"
+        ),
         PromptInput(color=Fore.MAGENTA, text="Simply start a conversation"),
     ]
 

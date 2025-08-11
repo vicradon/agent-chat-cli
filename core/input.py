@@ -1,5 +1,5 @@
 from typing import Optional
-from colorama import Fore, Style
+from colorama import Fore
 from core.cleanup import graceful_exit
 from core.interfaces import PromptInput
 
