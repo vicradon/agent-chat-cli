@@ -4,12 +4,12 @@ from pydantic_ai import Agent
 
 
 from core.ai_models import general_model
-from core.models import Prompts
+from core.models import Prompts, Conversation
 from core.input import prompt_inputs_to_input, sinput
 from core.state import RuntimeState
 from core.database import con
 from core.interfaces import PromptInput
-from helpers.ai import ai_helper
+from helpers.conversation import conversation_manager
 
 
 def ask_question():
@@ -23,7 +23,7 @@ def ask_question():
         system_prompt=system_prompt,
     )
 
-    result = ai_helper.load_conversation(1)
+    result = conversation_manager.load_conversation(1)
 
     while True:
         user_input = sinput(Fore.CYAN + "ask a question: ")
@@ -31,7 +31,7 @@ def ask_question():
 
         result = agent.run_sync(user_input, message_history=message_history)
         
-        ai_helper.save_conversation(result)
+        conversation_manager.save_conversation(result)
 
         print(Fore.YELLOW + f"assistant: {result.output}\n")
 
@@ -174,12 +174,100 @@ def decide_on_prompts():
         "3": ask_question,
     }
 
+    a_or_the = "the" if RuntimeState.login_user else "a"
     prompt_inputs = [
         PromptInput(color=Fore.GREEN, text="Create a new prompt"),
         PromptInput(
-            color=Fore.YELLOW, text="Start a conversation with an existing prompt"
+            color=Fore.YELLOW, text=f"Start {a_or_the} conversation with an existing prompt"
         ),
-        PromptInput(color=Fore.MAGENTA, text="Simply start a conversation"),
+        PromptInput(color=Fore.MAGENTA, text=f"Simply start {a_or_the} conversation"),
+    ]
+
+    while True:
+        intent = prompt_inputs_to_input(prompt_inputs)
+
+        if intent in intent_map:
+            intent_map[intent]()
+            break
+        print(Fore.RED + "Unknown choice, please try again.")
+
+
+def new_conversation():
+    # Create a new conversation record
+    new_conv = Conversation(user_id=RuntimeState.login_user.id)
+    
+    try:
+        Conversation.insert(new_conv)
+        con.commit()
+        
+        # Get the created conversation
+        created_conversation = list(
+            Conversation.select(
+                where=f"user_id='{RuntimeState.login_user.id}'"
+            )
+        )[-1]  # Get the last inserted conversation
+        
+        RuntimeState.current_conversation = created_conversation
+        print(Fore.GREEN + "New conversation started!")
+        
+    except Exception as e:
+        print(Fore.RED + f"Error creating conversation: {e}")
+    
+    decide_on_prompts()
+
+def select_existing_conversation():
+    conversations = list(
+        Conversation.select(
+            where=f"user_id='{RuntimeState.login_user.id}'"
+        )
+    )
+    
+    if not conversations:
+        print(Fore.YELLOW + "No existing conversations found. Let's start a new one.")
+        return new_conversation()
+    
+    print(Fore.MAGENTA + "\nYour conversations:")
+    for conv in conversations:
+        display_title = conv.title if conv.title else f"Conversation {conv.id}"
+        print(Fore.CYAN + f"{conv.id}. {display_title}")
+    
+    while True:
+        choice = sinput(
+            Fore.CYAN + "Choose a conversation ID, or 0 to start a new conversation: "
+        ).strip()
+        
+        if choice == "0":
+            return new_conversation()
+        
+        try:
+            choice_id = int(choice)
+            selected = next((c for c in conversations if c.id == choice_id), None)
+            if selected:
+                RuntimeState.current_conversation = selected
+                print(Fore.GREEN + f"Selected conversation: {selected.title or f'Conversation {selected.id}'}")
+                
+                # Load the conversation context and return - ask_question() will be called from main()
+                conversation_manager.load_conversation(selected.id)
+                return
+            else:
+                print(Fore.RED + "Invalid choice. Try again.")
+        except ValueError:
+            print(Fore.RED + "Invalid input. Try again.")
+
+
+def decide_on_conversation():
+    intent_map = {
+        "1": new_conversation,
+        "new": new_conversation,
+        "2": select_existing_conversation,
+        "existing": select_existing_conversation,
+    }
+
+    prompt_inputs = [
+        PromptInput(color=Fore.GREEN, text="Start a new conversation"),
+        PromptInput(
+            color=Fore.YELLOW, text="Select an existing conversation"
+        ),
     ]
 
     while True:

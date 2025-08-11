@@ -2,6 +2,13 @@
 
 A simple CLI built with Python that allows you to set system and personality prompts and use that to chat with different "AI agents".
 
+## Features
+
+1. Prompt saving 
+2. Prompt loading
+3. Conversation saving/loading (sqlite-based)
+4. Conversation export (soon)
+
 ## Project Structure
 
 <details>

@@ -4,13 +4,13 @@ from colorama import init
 from core.welcome import welcome_user
 from core.cleanup import graceful_exit
 from core.database import create_tables
-from core.prompt import decide_on_prompts, ask_question
+from core.prompt import decide_on_conversation, ask_question
 
 init(autoreset=True)
 
 def main():
     welcome_user()
-    decide_on_prompts()
+    decide_on_conversation()
     ask_question()
 
 signal.signal(signal.SIGINT, graceful_exit)

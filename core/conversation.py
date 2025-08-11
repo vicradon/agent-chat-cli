@@ -5,7 +5,7 @@ from core.models import Conversation
 from core.state import RuntimeState
 from core.interfaces import PromptInput
 from core.prompt import decide_on_prompts, ask_question
-from helpers.ai import ai_helper
+from helpers.conversation import conversation_manager
 
 
 def start_new_conversation() -> bool:
@@ -67,7 +67,7 @@ def select_existing_conversation() -> bool:
                 print(Fore.GREEN + f"Selected conversation: {selected.title or f'Conversation {selected.id}'}")
                 
                 # Load the conversation and start asking questions
-                result = ai_helper.load_conversation(selected.id)
+                result = conversation_manager.load_conversation(selected.id)
                 ask_question()
                 return True
             else:

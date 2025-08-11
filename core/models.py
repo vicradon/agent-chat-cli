@@ -1,4 +1,4 @@
-from simplesqlite.model import Integer, Model, Text
+from simplesqlite.model import Integer, Model, Text, Blob
 
 class User(Model):
     id = Integer(primary_key=True)
@@ -20,8 +20,8 @@ class Prompts(Model):
 class Conversation(Model):
     id = Integer(primary_key=True)
     user_id = Integer(not_null=True)
-    title = Text(default="")
-    content = Text(default="")
+    title = Text()
+    content = Blob()
 
     __constraints__ = [
         "FOREIGN KEY(user_id) REFERENCES User(id)"
