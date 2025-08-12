@@ -1,9 +1,10 @@
 from typing import Literal
 from colorama import Fore
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import UnexpectedModelBehavior
 
 
-from core.ai_models import general_model
+from core.ai_models import gemini_model, openrouter_model, openai_model_settings
 from core.models import Prompts, Conversation
 from core.input import prompt_inputs_to_input, sinput
 from core.state import RuntimeState
@@ -12,6 +13,13 @@ from core.interfaces import PromptInput
 from helpers.conversation import conversation_manager
 
 
+def write_to_error_log(e):
+    with open("ignored/error.txt", "a") as file:
+        import datetime
+        file.write(f"============{datetime.datetime.now()}=============")
+        file.write(str(e))
+        file.write("===========================================\n\n")
+
 def ask_question():
     system_prompt = f"{RuntimeState.system_prompt}"
 
@@ -19,22 +27,29 @@ def ask_question():
         system_prompt += f"Your personality is: {RuntimeState.personality_prompt}"
 
     agent = Agent(
-        general_model,
+        gemini_model,
+        # openrouter_model,
+        # model_settings=openai_model_settings,
         system_prompt=system_prompt,
     )
 
-    result = conversation_manager.load_conversation(1)
+    result = conversation_manager.load_conversation()
 
     while True:
         user_input = sinput(Fore.CYAN + "ask a question: ")
         message_history = result.all_messages() if result else []
 
-        result = agent.run_sync(user_input, message_history=message_history)
-        
-        conversation_manager.save_conversation(result)
+        try:
+            result = agent.run_sync(user_input, message_history=message_history)
+            conversation_manager.save_conversation(result)
 
-        print(Fore.YELLOW + f"assistant: {result.output}\n")
-
+            print(Fore.YELLOW + f"assistant: {result.output}\n")
+        except UnexpectedModelBehavior as e:
+            print(Fore.RED + "An error occured: Model response is invalid")
+            write_to_error_log(e)
+        except Exception as e:
+            print(Fore.RED + "An error occured")
+            write_to_error_log(e)
 
 def create_prompt(ptype: Literal["system", "personality"]) -> str:
     while True:
